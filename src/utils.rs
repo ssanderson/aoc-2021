@@ -43,7 +43,7 @@ where
 }
 
 /// Split a readable sequence into lines and parse into a sequence of values.
-pub fn parse_lines<T, R: Read>(readable: R) -> Result<Vec<T>, ParseLinesError<T>>
+pub fn parse_lines<T>(readable: impl Read) -> Result<Vec<T>, ParseLinesError<T>>
 where
     T: FromStr,
     <T as FromStr>::Err: std::error::Error + Send + Sync + 'static,
