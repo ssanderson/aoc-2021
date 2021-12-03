@@ -1,7 +1,8 @@
-mod problem;
 mod problem1;
+mod problem2;
+mod utils;
 
-use crate::problem::{Problem, ProblemResult};
+use crate::utils::ProblemResult;
 
 use structopt::StructOpt;
 
@@ -10,12 +11,15 @@ use structopt::StructOpt;
 enum Opt {
     /// Run problem 1.
     P1(problem1::P1),
+    /// Run problem 2.
+    P2(problem2::P2),
 }
 
 impl Opt {
     fn run(&self) -> ProblemResult {
         match self {
             Opt::P1(p) => p.run(),
+            Opt::P2(p) => p.run(),
         }
     }
 }
