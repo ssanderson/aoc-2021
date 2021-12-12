@@ -1,5 +1,6 @@
 mod problem1;
 mod problem2;
+mod problem3;
 mod utils;
 
 use crate::utils::ProblemResult;
@@ -13,6 +14,7 @@ enum Opt {
     P1(problem1::P1),
     /// Run problem 2.
     P2(problem2::P2),
+    P3(problem3::P3),
 }
 
 impl Opt {
@@ -20,6 +22,7 @@ impl Opt {
         match self {
             Opt::P1(p) => p.run(),
             Opt::P2(p) => p.run(),
+            Opt::P3(p) => p.run(),
         }
     }
 }
