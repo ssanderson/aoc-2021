@@ -55,6 +55,39 @@
 ///
 /// Consider only horizontal and vertical lines. At how many points do at least
 /// two lines overlap?
+///
+/// --- Part Two ---
+///
+/// Unfortunately, considering only horizontal and vertical lines doesn't give
+/// you the full picture; you need to also consider diagonal lines.
+///
+/// Because of the limits of the hydrothermal vent mapping system, the lines in
+/// your list will only ever be horizontal, vertical, or a diagonal line at
+/// exactly 45 degrees. In other words:
+///
+/// An entry like 1,1 -> 3,3 covers points 1,1, 2,2, and 3,3.
+/// An entry like 9,7 -> 7,9 covers points 9,7, 8,8, and 7,9.
+///
+/// Considering all lines from the above example would now produce the
+/// following diagram:
+///
+/// 1.1....11.
+/// .111...2..
+/// ..2.1.111.
+/// ...1.2.2..
+/// .112313211
+/// ...1.2....
+/// ..1...1...
+/// .1.....1..
+/// 1.......1.
+/// 222111....
+///
+/// You still need to determine the number of points where at least two lines
+/// overlap. In the above example, this is still anywhere in the diagram with a
+/// 2 or larger - now a total of 12 points.
+///
+/// Consider all of the lines. At how many points do at least two lines
+/// overlap?
 use std::str::FromStr;
 
 use structopt::StructOpt;
@@ -75,40 +108,44 @@ pub struct P5 {
 impl P5 {
     pub fn run(&self) -> ProblemResult {
         let lines: Vec<Line> = parse_lines_from_path(&self.input)?;
-        let (p1, _p2) = run_problem(&lines)?;
+        let (p1, p2) = run_problem(&lines)?;
 
         println!("Part 1: {}", p1);
+        println!("Part 2: {}", p2);
 
         Ok(())
     }
 }
 
-fn run_problem(lines: &Vec<Line>) -> ProblemResult<(u64, ())> {
-    let lines: Vec<_> = lines
+fn run_problem(lines: &Vec<Line>) -> ProblemResult<(usize, usize)> {
+    let rect_lines: Vec<_> = lines
         .iter()
         .filter(|line| line.is_horizontal_or_vertical())
+        .cloned()
         .collect();
+    let p1 = count_overlaps(&rect_lines);
+    let p2 = count_overlaps(lines);
 
-    let mut locs = std::collections::HashMap::<(u16, u16), u64>::new();
+    Ok((p1, p2))
+}
 
+fn count_overlaps(lines: &Vec<Line>) -> usize {
+    let mut locs = std::collections::HashMap::<(i16, i16), u64>::new();
     for line in lines {
         for point in line.iter_points() {
             let entry = locs.entry(point).or_insert(0);
             *entry += 1;
         }
     }
-
-    let count = locs.iter().filter(|&(_, &v)| v > 1).count();
-
-    Ok((count as u64, ()))
+    locs.iter().filter(|&(_, &v)| v > 1).count()
 }
 
 #[derive(Debug, Clone, Copy)]
 struct Line {
-    x1: u16,
-    y1: u16,
-    x2: u16,
-    y2: u16,
+    x1: i16,
+    y1: i16,
+    x2: i16,
+    y2: i16,
 }
 
 impl Line {
@@ -116,20 +153,27 @@ impl Line {
         (self.x1 == self.x2) || (self.y1 == self.y2)
     }
 
-    fn iter_points(&self) -> Box<dyn Iterator<Item = (u16, u16)>> {
-        if self.x1 == self.x2 {
-            let x = self.x1;
-            let ymin = std::cmp::min(self.y1, self.y2);
-            let ymax = std::cmp::max(self.y1, self.y2);
-            Box::new((ymin..=ymax).map(move |y| (x, y)))
-        } else if self.y1 == self.y2 {
-            let y = self.y1;
-            let xmin = std::cmp::min(self.x1, self.x2);
-            let xmax = std::cmp::max(self.x1, self.x2);
-            Box::new((xmin..=xmax).map(move |x| (x, y)))
-        } else {
-            Box::new(std::iter::empty())
-        }
+    fn iter_points(&self) -> impl Iterator<Item = (i16, i16)> {
+        let dx: i16 = match self.x1.cmp(&self.x2) {
+            std::cmp::Ordering::Less => 1,
+            std::cmp::Ordering::Equal => 0,
+            std::cmp::Ordering::Greater => -1,
+        };
+
+        let dy: i16 = match self.y1.cmp(&self.y2) {
+            std::cmp::Ordering::Less => 1,
+            std::cmp::Ordering::Equal => 0,
+            std::cmp::Ordering::Greater => -1,
+        };
+
+        let count = std::cmp::max((self.x1 - self.x2).abs(), (self.y1 - self.y2).abs()) + 1;
+
+        let x1 = self.x1;
+        let y1 = self.y1;
+
+        (0..count).map(move |dist| {
+            (x1 + dist * dx, y1 + dist * dy)
+        })
     }
 }
 
@@ -152,8 +196,8 @@ impl FromStr for Line {
         let (coord1, coord2) =
             split_exactly_once(s, " -> ").ok_or(LineParseError::InvalidFormat(s.to_owned()))?;
 
-        let (x1, y1) = parse_pair::<u16>(coord1)?;
-        let (x2, y2) = parse_pair::<u16>(coord2)?;
+        let (x1, y1) = parse_pair::<i16>(coord1)?;
+        let (x2, y2) = parse_pair::<i16>(coord2)?;
 
         Ok(Line { x1, y1, x2, y2 })
     }
@@ -199,7 +243,7 @@ mod tests {
         let (p1, p2) = run_problem(&lines)?;
 
         assert_eq!(p1, 5);
-        assert_eq!(p2, ());
+        assert_eq!(p2, 12);
 
         Ok(())
     }
